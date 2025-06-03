@@ -1,0 +1,170 @@
+import json
+import datetime
+import os
+
+FILE_NAME = "todo_list.json"
+
+def load_data(): # a function used to get data from the json file 
+    if os.path.exists(FILE_NAME): # to check if the file exist befor doing anything
+        with open(FILE_NAME, "r") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {"task": {}, "done task": {}, "task in progress": {}}
+    return {"task": {}, "done task": {}, "task in progress": {}}
+
+def save_data(data): # function to save data when updated
+    with open(FILE_NAME, "w") as f:
+        json.dump(data, f, indent=4)
+
+def add_task(): 
+    data = load_data()
+    task_id = input("Enter the ID of the task: ").strip()
+
+    if task_id in data["task"]:
+        print("A task with this ID already exists.")
+        return
+
+    task_name = input("Please enter your task: ")
+    time_created = datetime.datetime.now().isoformat()
+
+    data["task"][task_id] = {
+        "task": task_name,
+        "time": time_created
+    }
+    save_data(data)
+    print("Task added successfully.")
+
+def update_task():
+    data = load_data()
+    task_id = input("Enter the ID of the task: ").strip()
+
+    if task_id not in data["task"]:
+        print("Task not found.")
+        return
+
+    new_task = input("Please give the update: ")
+    new_time = datetime.datetime.now().isoformat() #the time when the task was updated
+
+    data["task"][task_id]["task"] = new_task
+    data["task"][task_id]["time"] = new_time
+
+    save_data(data)
+    print(f"Task {task_id} updated successfully.")
+
+def delete_task():
+    data = load_data()
+    task_id = input("Enter the ID of the task to delete: ").strip()
+
+    if task_id in data["task"]:
+        del data["task"][task_id]
+        save_data(data)
+        print(f"Task {task_id} deleted successfully.")
+    else:
+        print("Task not found.")
+
+def task_in_progress():
+    data = load_data()
+    task_id = input("Enter the ID of the task to mark as in progress: ").strip()
+
+    if task_id not in data["task"]:
+        print("Task not found.")
+        return
+
+    task = data["task"][task_id]
+    task["started_at"] = datetime.datetime.now().isoformat() # the time when the user started doing the task
+
+    data["task in progress"][task_id] = task
+    save_data(data)
+    print(f"Task {task_id} is now marked as 'in progress'.")
+
+def done_task():
+    data = load_data()
+    task_id = input("Enter the ID of the done task: ").strip()
+
+    if task_id not in data["task in progress"]:
+        print("Task not found in progress.")
+        return
+
+    time_done = datetime.datetime.now().isoformat()
+    task = data["task in progress"][task_id]
+
+    try: # to calculate the time needed to finish this task from start to end
+        started_at = datetime.datetime.fromisoformat(task.get("started_at", task["time"]))
+        finished_at = datetime.datetime.fromisoformat(time_done)
+        duration = (finished_at - started_at).total_seconds()
+    except Exception as e:
+        print(f"Error calculating duration: {e}")
+        duration = None
+
+    task["finished_at"] = time_done
+    if duration is not None:
+        task["duration_seconds"] = duration
+
+    data["done task"][task_id] = task
+
+    data["task"].pop(task_id, None)
+    data["task in progress"].pop(task_id, None)
+
+    save_data(data)
+    print(f"Task {task_id} marked as done.")
+
+def list_tasks():
+    data = load_data()
+    if data["task"]:
+        for task_id, task in data["task"].items():
+            print(f"  ID: {task_id}")
+            print(f"    Task: {task['task']}")
+            print(f"    Created at: {task['time']}")
+
+def list_in_progress():
+    data = load_data()
+    if data["task in progress"]:
+        for task_id, task in data["task in progress"].items():
+            print(f"  ID: {task_id}")
+            print(f"    Task: {task['task']}")
+            print(f"    Started at: {task.get('started_at', 'N/A')}")
+
+def list_done():
+    data = load_data()
+    if data["done task"]:
+        for task_id, task in data["done task"].items():
+            print(f"  ID: {task_id}")
+            print(f"    Task: {task['task']}")
+            print(f"    Finished at: {task['finished_at']}")
+            print(f"    Duration: {task.get('duration_seconds', 'N/A')} seconds")
+
+if __name__ == '__main__':
+    print('welcome to the todo app')
+    print('for adding task press 1')
+    print('for updating task press 2')
+    print('for deleting task press 3')
+    print('for marking task in progress press 4')
+    print('for marking task done press 5')
+    print('for listing task press 6')
+    print('for listing in progress tasks press 7')
+    print('for listing done tasks press 8')
+    print('to exit press 9')
+    print('-------------------------------')
+    todo = True
+    while todo:
+        answer = int(input('what are you willing to do : \n'))
+        if answer == 1:
+            add_task()
+        if answer == 2 :
+            update_task()
+        if answer == 3 :
+            delete_task()
+        if answer == 4 :
+            task_in_progress()
+        if answer == 5 :
+            done_task()
+        if answer == 6 :
+            list_tasks()
+        if answer == 7 :
+            list_in_progress()
+        if answer == 8 :
+            list_done()
+        if answer == 9 :
+            print('thank you for using the app')
+            todo = False
